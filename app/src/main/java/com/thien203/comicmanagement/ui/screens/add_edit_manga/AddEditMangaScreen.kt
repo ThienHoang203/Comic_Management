@@ -30,8 +30,8 @@ fun AddEditMangaScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val allGenres by viewModel.allGenres.collectAsState()
-    val allFormats by viewModel.allFormats.collectAsState()
+    val allGenres = uiState.allGenres
+    val allFormats = uiState.allFormats
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 

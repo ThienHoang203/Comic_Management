@@ -36,6 +36,7 @@ fun GenreManagerDialog(
     var newGenreName by remember { mutableStateOf("") }
     var newGenreShortName by remember { mutableStateOf("") }
     var genreToEdit by remember { mutableStateOf<GenreEntity?>(null) }
+    var genreToDelete by remember { mutableStateOf<GenreEntity?>(null) }
     var editGenreName by remember { mutableStateOf("") }
     var editGenreShortName by remember { mutableStateOf("") }
 
@@ -43,6 +44,7 @@ fun GenreManagerDialog(
     var newFormatName by remember { mutableStateOf("") }
     var newFormatShortName by remember { mutableStateOf("") }
     var formatToEdit by remember { mutableStateOf<FormatEntity?>(null) }
+    var formatToDelete by remember { mutableStateOf<FormatEntity?>(null) }
     var editFormatName by remember { mutableStateOf("") }
     var editFormatShortName by remember { mutableStateOf("") }
 
@@ -55,10 +57,59 @@ fun GenreManagerDialog(
         "Mecha / Robot", "Âm nhạc / Nghệ thuật (Music)", "Trò chơi / Game (Gaming)",
         "Ẩm thực / Nấu ăn (Cooking)", "Y học / Bác sĩ (Medical)", "Shonen", "Shojo", "Seinen", "Josei",
         "Đa vũ trụ / Hệ thống (System)", "Kịch tính / Drama", "Đời thường / Sinh tồn (Survival)",
-        "Manga", "Manhwa", "Manhua"
+        "Manga (Truyện Nhật)", "Manhwa (Truyện Hàn)", "Manhua (Truyện Trung)", "Comic (Truyện Âu Mỹ)",
+        "Manga", "Manhwa", "Manhua", "Comic"
     )
 
     val (defaultGenres, customGenres) = genres.partition { defaultGenreNames.contains(it.name) }
+
+    // Confirm Delete Genre Dialog
+    if (genreToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { genreToDelete = null },
+            title = { Text("Xác nhận xóa thể loại") },
+            text = { Text("Bạn có chắc chắn muốn xóa thể loại '${genreToDelete!!.name}' khỏi hệ thống?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteGenre(genreToDelete!!)
+                        genreToDelete = null
+                    }
+                ) {
+                    Text("Xóa", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { genreToDelete = null }) {
+                    Text("Hủy")
+                }
+            }
+        )
+    }
+
+    // Confirm Delete Format Dialog
+    if (formatToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { formatToDelete = null },
+            title = { Text("Xác nhận xóa định dạng") },
+            text = { Text("Bạn có chắc chắn muốn xóa định dạng '${formatToDelete!!.name}' khỏi hệ thống?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteFormat(formatToDelete!!)
+                        formatToDelete = null
+                    }
+                ) {
+                    Text("Xóa", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { formatToDelete = null }) {
+                    Text("Hủy")
+                }
+            }
+        )
+    }
 
     // Sub-dialog for editing genre name & short name
     if (genreToEdit != null) {
@@ -243,7 +294,7 @@ fun GenreManagerDialog(
                                         editGenreName = genre.name
                                         editGenreShortName = genre.shortName
                                     },
-                                    onDelete = { onDeleteGenre(genre) }
+                                    onDelete = { genreToDelete = genre }
                                 )
                             }
 
@@ -269,7 +320,7 @@ fun GenreManagerDialog(
                                     editGenreName = genre.name
                                     editGenreShortName = genre.shortName
                                 },
-                                onDelete = { onDeleteGenre(genre) }
+                                onDelete = { genreToDelete = genre }
                             )
                         }
                     }
@@ -366,7 +417,7 @@ fun GenreManagerDialog(
                                             )
                                         }
 
-                                        IconButton(onClick = { onDeleteFormat(fmt) }) {
+                                        IconButton(onClick = { formatToDelete = fmt }) {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
                                                 contentDescription = "Xóa định dạng",

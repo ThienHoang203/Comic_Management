@@ -9,12 +9,7 @@ import com.thien203.comicmanagement.data.local.entity.GenreEntity
 import com.thien203.comicmanagement.data.local.entity.WorkEntity
 import com.thien203.comicmanagement.data.repository.WorkRepository
 import com.thien203.comicmanagement.util.ImageStorageHelper
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 enum class FieldWithError {
@@ -22,7 +17,7 @@ enum class FieldWithError {
     TOTAL_VOLUMES
 }
 
-data class AddEditMangaUiState(
+private data class AddEditFormState(
     val title: String = "",
     val author: String = "",
     val publisher: String = "",
@@ -38,25 +33,84 @@ data class AddEditMangaUiState(
     val totalVolumesError: String? = null
 )
 
+data class AddEditMangaUiState(
+    val title: String = "",
+    val author: String = "",
+    val publisher: String = "",
+    val totalVolumes: String = "1",
+    val defaultPrice: String = "",
+    val description: String = "",
+    val coverUri: String? = null,
+    val selectedFormatId: Long? = null,
+    val selectedGenreIds: Set<Long> = emptySet(),
+    val allGenres: List<GenreEntity> = emptyList(),
+    val allFormats: List<FormatEntity> = emptyList(),
+    val isEditing: Boolean = false,
+    val isSaving: Boolean = false,
+    val titleError: String? = null,
+    val totalVolumesError: String? = null
+)
+
 class AddEditMangaViewModel(
     private val workId: Long?,
     private val repository: WorkRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AddEditMangaUiState())
-    val uiState: StateFlow<AddEditMangaUiState> = _uiState.asStateFlow()
+    private val _formState = MutableStateFlow(AddEditFormState())
 
-    val allGenres: StateFlow<List<GenreEntity>> = repository.getAllGenres().stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    // Cached reactive stream for Genres
+    val allGenres: StateFlow<List<GenreEntity>> = repository.getAllGenres()
+        .distinctUntilChanged()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
-    val allFormats: StateFlow<List<FormatEntity>> = repository.getAllFormats().stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    // Cached reactive stream for Formats
+    val allFormats: StateFlow<List<FormatEntity>> = repository.getAllFormats()
+        .distinctUntilChanged()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    // Unified Atomic UI State combining form state with cached DB lists
+    val uiState: StateFlow<AddEditMangaUiState> = combine(
+        _formState,
+        allGenres,
+        allFormats
+    ) { form, genres, formats ->
+        // Self-healing cache: Filter out any selectedGenreIds that were deleted from DB
+        val validGenreIds = form.selectedGenreIds.filter { id -> genres.any { it.id == id } }.toSet()
+        // Self-healing cache: Reset selectedFormatId to null if it was deleted from DB
+        val validFormatId = if (formats.any { it.id == form.selectedFormatId }) form.selectedFormatId else null
+
+        AddEditMangaUiState(
+            title = form.title,
+            author = form.author,
+            publisher = form.publisher,
+            totalVolumes = form.totalVolumes,
+            defaultPrice = form.defaultPrice,
+            description = form.description,
+            coverUri = form.coverUri,
+            selectedFormatId = validFormatId,
+            selectedGenreIds = validGenreIds,
+            allGenres = genres,
+            allFormats = formats,
+            isEditing = form.isEditing,
+            isSaving = form.isSaving,
+            titleError = form.titleError,
+            totalVolumesError = form.totalVolumesError
+        )
+    }
+        .distinctUntilChanged()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = AddEditMangaUiState()
+        )
 
     init {
         if (workId != null && workId > 0) {
@@ -68,16 +122,12 @@ class AddEditMangaViewModel(
         viewModelScope.launch {
             val detail = repository.getWorkDetailById(id).firstOrNull()
             if (detail != null) {
-                val avgPrice = if (detail.volumes.isNotEmpty()) {
-                    detail.volumes.map { it.price }.average()
-                } else 0.0
-
-                _uiState.value = AddEditMangaUiState(
+                _formState.value = AddEditFormState(
                     title = detail.work.title,
                     author = detail.work.author,
                     publisher = detail.work.publisher,
                     totalVolumes = detail.work.totalVolumes.toString(),
-                    defaultPrice = if (avgPrice > 0) String.format("%.0f", avgPrice) else "",
+                    defaultPrice = if (detail.work.defaultPrice > 0) String.format("%.0f", detail.work.defaultPrice) else "",
                     description = detail.work.description,
                     coverUri = detail.work.coverUri,
                     selectedFormatId = detail.work.formatId,
@@ -89,52 +139,52 @@ class AddEditMangaViewModel(
     }
 
     fun onTitleChanged(v: String) {
-        _uiState.value = _uiState.value.copy(
+        _formState.value = _formState.value.copy(
             title = v,
-            titleError = if (v.isNotBlank()) null else _uiState.value.titleError
+            titleError = if (v.isNotBlank()) null else _formState.value.titleError
         )
     }
 
     fun onAuthorChanged(v: String) {
-        _uiState.value = _uiState.value.copy(author = v)
+        _formState.value = _formState.value.copy(author = v)
     }
 
     fun onPublisherChanged(v: String) {
-        _uiState.value = _uiState.value.copy(publisher = v)
+        _formState.value = _formState.value.copy(publisher = v)
     }
 
     fun onTotalVolumesChanged(v: String) {
         val isValid = v.toIntOrNull()?.let { it > 0 } == true
-        _uiState.value = _uiState.value.copy(
+        _formState.value = _formState.value.copy(
             totalVolumes = v,
-            totalVolumesError = if (isValid) null else _uiState.value.totalVolumesError
+            totalVolumesError = if (isValid) null else _formState.value.totalVolumesError
         )
     }
 
     fun onDefaultPriceChanged(v: String) {
-        _uiState.value = _uiState.value.copy(defaultPrice = v)
+        _formState.value = _formState.value.copy(defaultPrice = v)
     }
 
     fun onDescriptionChanged(v: String) {
-        _uiState.value = _uiState.value.copy(description = v)
+        _formState.value = _formState.value.copy(description = v)
     }
 
     fun onCoverUriSelected(uri: String?) {
-        _uiState.value = _uiState.value.copy(coverUri = uri)
+        _formState.value = _formState.value.copy(coverUri = uri)
     }
 
     fun onFormatSelected(formatId: Long?) {
-        _uiState.value = _uiState.value.copy(selectedFormatId = formatId)
+        _formState.value = _formState.value.copy(selectedFormatId = formatId)
     }
 
     fun toggleGenre(genreId: Long) {
-        val current = _uiState.value.selectedGenreIds.toMutableSet()
+        val current = _formState.value.selectedGenreIds.toMutableSet()
         if (current.contains(genreId)) {
             current.remove(genreId)
         } else {
             current.add(genreId)
         }
-        _uiState.value = _uiState.value.copy(selectedGenreIds = current)
+        _formState.value = _formState.value.copy(selectedGenreIds = current)
     }
 
     fun saveManga(
@@ -143,7 +193,7 @@ class AddEditMangaViewModel(
         onSuccess: () -> Unit,
         onErrorFound: (FieldWithError) -> Unit
     ) {
-        val state = _uiState.value
+        val state = _formState.value
         var titleErr: String? = null
         var volumesErr: String? = null
 
@@ -157,7 +207,7 @@ class AddEditMangaViewModel(
         }
 
         if (titleErr != null || volumesErr != null) {
-            _uiState.value = state.copy(
+            _formState.value = state.copy(
                 titleError = titleErr,
                 totalVolumesError = volumesErr
             )
@@ -167,7 +217,7 @@ class AddEditMangaViewModel(
         }
 
         viewModelScope.launch {
-            _uiState.value = state.copy(
+            _formState.value = state.copy(
                 titleError = null,
                 totalVolumesError = null,
                 isSaving = true
@@ -194,10 +244,10 @@ class AddEditMangaViewModel(
 
             if (workId != null && workId > 0) {
                 repository.updateWork(entity, state.selectedGenreIds.toList(), totalVols)
-                _uiState.value = state.copy(isSaving = false)
+                _formState.value = state.copy(isSaving = false)
             } else {
                 repository.saveWork(entity, state.selectedGenreIds.toList())
-                _uiState.value = AddEditMangaUiState() // Reset form state after adding new
+                _formState.value = AddEditFormState() // Reset form state after adding new
             }
 
             onSuccess()

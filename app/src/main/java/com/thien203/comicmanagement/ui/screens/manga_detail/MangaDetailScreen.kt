@@ -53,6 +53,7 @@ fun MangaDetailScreen(
     val allFormats by viewModel.allFormats.collectAsState()
     val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showReduceVolumeDialog by remember { mutableStateOf(false) }
     var showFormatDialog by remember { mutableStateOf(false) }
     var previewImageUri by remember { mutableStateOf<String?>(null) }
 
@@ -167,6 +168,7 @@ fun MangaDetailScreen(
         )
     }
 
+    // Confirm Delete Work Dialog
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -186,6 +188,31 @@ fun MangaDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Hủy")
+                }
+            }
+        )
+    }
+
+    // Confirm Reduce Volume Dialog
+    if (showReduceVolumeDialog) {
+        val lastVolumeNum = detail?.volumes?.size ?: 0
+        AlertDialog(
+            onDismissRequest = { showReduceVolumeDialog = false },
+            title = { Text("Xác nhận giảm tập") },
+            text = { Text("Bạn có chắc chắn muốn xóa Tập $lastVolumeNum khỏi tác phẩm này?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showReduceVolumeDialog = false
+                        viewModel.removeOneVolume()
+                    }
+                ) {
+                    Text("Xóa tập", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReduceVolumeDialog = false }) {
                     Text("Hủy")
                 }
             }
@@ -490,7 +517,7 @@ fun MangaDetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 OutlinedIconButton(
-                                    onClick = { viewModel.removeOneVolume() },
+                                    onClick = { showReduceVolumeDialog = true },
                                     enabled = totalCount > 1,
                                     modifier = Modifier.size(32.dp)
                                 ) {

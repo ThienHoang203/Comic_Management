@@ -7,7 +7,6 @@ import com.thien203.comicmanagement.data.local.entity.GenreEntity
 import com.thien203.comicmanagement.data.local.relation.WorkWithGenres
 import com.thien203.comicmanagement.data.model.SortOrder
 import com.thien203.comicmanagement.data.repository.WorkRepository
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -25,8 +24,6 @@ data class MangaListUiState(
 class MangaListViewModel(
     private val repository: WorkRepository
 ) : ViewModel() {
-
-    private var mockDataJob: Job? = null
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
@@ -148,21 +145,5 @@ class MangaListViewModel(
         viewModelScope.launch {
             repository.deleteWork(workId, coverUri)
         }
-    }
-
-    fun generateMockData(onProgress: (Float) -> Unit, onFinished: () -> Unit) {
-        mockDataJob?.cancel()
-        mockDataJob = viewModelScope.launch {
-            try {
-                repository.generateMockData(count = 1000, onProgress = onProgress)
-            } finally {
-                onFinished()
-            }
-        }
-    }
-
-    fun cancelMockDataGeneration() {
-        mockDataJob?.cancel()
-        mockDataJob = null
     }
 }

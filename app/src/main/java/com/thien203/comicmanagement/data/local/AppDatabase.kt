@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
         WorkGenreCrossRef::class,
         FormatEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -107,26 +107,24 @@ abstract class AppDatabase : RoomDatabase() {
                     GenreEntity(name = "Đa vũ trụ / Hệ thống (System)", shortName = "System"),
                     GenreEntity(name = "Kịch tính / Drama", shortName = "Drama"),
                     GenreEntity(name = "Đời thường / Sinh tồn (Survival)", shortName = "Survival"),
-                    GenreEntity(name = "Manga", shortName = "Manga"),
-                    GenreEntity(name = "Manhwa", shortName = "Manhwa"),
-                    GenreEntity(name = "Manhua", shortName = "Manhua")
+                    GenreEntity(name = "Manga (Truyện Nhật)", shortName = "Manga"),
+                    GenreEntity(name = "Manhwa (Truyện Hàn)", shortName = "Manhwa"),
+                    GenreEntity(name = "Manhua (Truyện Trung)", shortName = "Manhua"),
+                    GenreEntity(name = "Comic (Truyện Âu Mỹ)", shortName = "Comic")
                 )
                 genreDao.insertDefaultGenres(defaultGenres)
             }
 
             private suspend fun populateInitialFormats(formatDao: FormatDao) {
                 val defaultFormats = listOf(
-                    FormatEntity(name = "Manga (Truyện tranh Nhật)", shortName = "Manga"),
                     FormatEntity(name = "Light Novel (Truyện chữ Nhật)", shortName = "Light Novel"),
-                    FormatEntity(name = "Manhwa (Truyện tranh Hàn)", shortName = "Manhwa"),
-                    FormatEntity(name = "Manhua (Truyện tranh Trung)", shortName = "Manhua"),
-                    FormatEntity(name = "Comic (Truyện tranh Âu Mỹ)", shortName = "Comic"),
                     FormatEntity(name = "Webtoon (Truyện tranh màu)", shortName = "Webtoon"),
                     FormatEntity(name = "Artbook / Sách ảnh", shortName = "Artbook"),
                     FormatEntity(name = "Novel / Tiểu thuyết chữ", shortName = "Novel"),
                     FormatEntity(name = "Fanbook / DataBook", shortName = "Fanbook"),
                     FormatEntity(name = "One-shot (Truyện ngắn 1 tập)", shortName = "One-shot"),
-                    FormatEntity(name = "Doujinshi (Tự xuất bản)", shortName = "Doujinshi"),
+                    FormatEntity(name = "Doujinshi (Ấn phẩm tự xuất bản)", shortName = "Doujinshi"),
+                    FormatEntity(name = "Bìa mềm / Paperback (Bản thường)", shortName = "Bìa mềm"),
                     FormatEntity(name = "Bìa cứng / Hardcover", shortName = "Hardcover"),
                     FormatEntity(name = "Bản đặc biệt / Special Edition", shortName = "Special Ed.")
                 )

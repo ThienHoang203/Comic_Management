@@ -13,7 +13,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
@@ -25,7 +24,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,9 +53,6 @@ fun MangaListScreen(
     var showFormatFilterSheet by remember { mutableStateOf(false) }
     var showGenreFilterSheet by remember { mutableStateOf(false) }
     var genreSheetSearchQuery by remember { mutableStateOf("") }
-
-    var isGeneratingMockData by remember { mutableStateOf(false) }
-    var mockDataProgress by remember { mutableFloatStateOf(0f) }
 
     var workToDelete by remember { mutableStateOf<WorkWithGenres?>(null) }
 
@@ -90,51 +85,6 @@ fun MangaListScreen(
         if (uiState.works.isNotEmpty() && gridState.firstVisibleItemIndex > 0) {
             gridState.scrollToItem(0)
         }
-    }
-
-    // Modal Progress Dialog for Mock Data Generation with Stop Button
-    if (isGeneratingMockData) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("Đang tạo 1.000 tác phẩm mẫu", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Số lượng tập của mỗi tác phẩm được sinh ngẫu nhiên từ 100 đến 10.000 tập.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    LinearProgressIndicator(
-                        progress = { mockDataProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                    )
-
-                    Text(
-                        text = "${(mockDataProgress * 100).toInt()}% hoàn thành",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.cancelMockDataGeneration()
-                        isGeneratingMockData = false
-                    }
-                ) {
-                    Text("Dừng lại", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                }
-            }
-        )
     }
 
     // Modal Bottom Sheet: Format Filter Grid Sheet
@@ -393,23 +343,6 @@ fun MangaListScreen(
             TopAppBar(
                 title = { Text("Bộ Sưu Tập Tác Phẩm", fontWeight = FontWeight.Bold) },
                 actions = {
-                    IconButton(
-                        onClick = {
-                            isGeneratingMockData = true
-                            mockDataProgress = 0f
-                            viewModel.generateMockData(
-                                onProgress = { mockDataProgress = it },
-                                onFinished = { isGeneratingMockData = false }
-                            )
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "Tạo 1.000 tác phẩm mẫu",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
                     IconButton(onClick = { showGenreDialog = true }) {
                         Icon(imageVector = Icons.Default.Category, contentDescription = "Quản lý thể loại")
                     }
